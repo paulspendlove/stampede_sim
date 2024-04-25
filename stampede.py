@@ -15,11 +15,8 @@ class Cell:
         self.south = None
         self.east = None
         self.west = None
-
-        self.g = 0
-        self.h = 0
-        self.f = 0
-        self.parent = None
+        self.x = None
+        self.y = None
 
     def set_neighbors(self, north=None, south=None, east=None, west=None):
         self.north, self.south, self.east, self.west = north, south, east, west
@@ -31,9 +28,15 @@ class Cell:
         if self.cellType == "exit" and self.occupied:
             self.occupied = None
 
+    def get_coordinates(self):
+        return self.x, self.y
+
 
 class Person:
+    all_people = []
+
     def __init__(self, isStrong, isRational, isRelaxed, location):
+        self.all_people.append(self)
         self.isStrong = isStrong
         self.isRational = isRational
         self.isRelaxed = isRelaxed
@@ -125,10 +128,10 @@ def create_grid(rows, cols, custom_layout=None):
         [
             Cell(
                 "exit"
-                if custom_layout and custom_layout[i][j] == "E"
+                if custom_layout and custom_layout[j][i] == "E"
                 else (
                     "obstacle"
-                    if custom_layout and custom_layout[i][j] == "X"
+                    if custom_layout and custom_layout[j][i] == "X"
                     else "walkable"
                 )
             )
@@ -143,6 +146,8 @@ def create_grid(rows, cols, custom_layout=None):
             east = grid[i][j + 1] if j < cols - 1 else None
             west = grid[i][j - 1] if j > 0 else None
             grid[i][j].set_neighbors(north, south, east, west)
+            grid[i][j].x = j
+            grid[i][j].y = i
     return grid
 
 
@@ -207,8 +212,28 @@ def find_exits(grid):
     for row in grid:
         for cell in row:
             if cell.cellType == "exit":
-                exits.append(cell)
+                exits.append(cell.get_coordinates())
     return exits
+
+
+def find_nearest_exit(exits, start_location):
+    start_x, start_y = start_location
+    closest_exit = None
+    closest_distance = math.inf
+
+    for exit in exits:
+        exit_x, exit_y = exit
+        distance = math.abs(exit_x - start_x) + math.abs(exit_y - start_y)
+        if distance < closest_distance:
+            closest_exit = exit
+            closest_distance = distance
+
+    return closest_exit
+
+
+def a_star_search(grid, start, end):
+    # TODO: Implement A* search algorithm
+    pass
 
 
 def run_simulation(grid, steps=10):
@@ -217,32 +242,38 @@ def run_simulation(grid, steps=10):
 
     print("\nRunning simulation...")
     try:
+        people_locations = [
+            person.location.get_coordinates() for person in Person.all_people
+        ]
         for _ in range(steps):
-            for row in grid:
-                for cell in row:
-                    cell.clear_if_exit()
-                    if cell.occupied:
+            for person in Person.all_people:
+                if person.isDead or person.isFallen:
+                    continue
+                else:
+                    start_location = person.location.get_coordinates()
+                    exit = find_nearest_exit(find_exits(grid), start_location)
 
-                        # TODO: Perform pathfinding algorithm for each occupied cell.
-                        # Pathfinding should consider fallen people as obstacles for rational, relaxed people, but as
-                        # things that can be moved over for better gain for irrational, non-relaxed people.
+                    path = a_star_search(grid, start_location, exit)
+                # TODO: Perform pathfinding algorithm for each occupied cell.
+                # Pathfinding should consider fallen people as obstacles for rational, relaxed people, but as
+                # things that can be moved over for better gain for irrational, non-relaxed people.
 
-                        # TODO: Either move person in the algorithm function OR here.  Account for game theory logic.
-                        # i.e. Strong and Irrational person will attempt to push to progress.  Others may be blocked, and stand still.
-                        # For any fallen or blocked people, use appropriate functions to increment their trackers.
-                        # (so we know when to stand a fallen person back up, or mark as dead)
+                # TODO: Either move person in the algorithm function OR here.  Account for game theory logic.
+                # i.e. Strong and Irrational person will attempt to push to progress.  Others may be blocked, and stand still.
+                # For any fallen or blocked people, use appropriate functions to increment their trackers.
+                # (so we know when to stand a fallen person back up, or mark as dead)
 
-                        # TODO: Update each person's state at some point using the update_status function, after calling fallen or blocked, etc. when necessary.
+                # TODO: Update each person's state at some point using the update_status function, after calling fallen or blocked, etc. when necessary.
 
-                        # TODO: Finalize how pushing will work.  Since 2 people can't occupy one space, does pushing swap both?
-                        # Or does pushing only occur if there's an empty space past the fallen person to be moved into?
-                        # Same decision should apply to trampling.
+                # TODO: Finalize how pushing will work.  Since 2 people can't occupy one space, does pushing swap both?
+                # Or does pushing only occur if there's an empty space past the fallen person to be moved into?
+                # Same decision should apply to trampling.
 
-                        # I don't think we have time to calculate inertia or any similar physics mentioned in the paper.
-                        # I'm not convinced the paper did either, as its mentioned so briefly.  I think this current turn based system
-                        # will be fine though.
+                # I don't think we have time to calculate inertia or any similar physics mentioned in the paper.
+                # I'm not convinced the paper did either, as its mentioned so briefly.  I think this current turn based system
+                # will be fine though.
 
-                        pass
+                pass
 
             clear_output(wait=True)
             draw_grid(grid, ax)
@@ -291,6 +322,7 @@ def main():
         print("5x5 grid with two obstacles")
         grid = create_grid(5, 5)
         grid[0][4].cellType = "exit"
+        grid[4][2].cellType = "exit"
         grid[1][1].cellType = "obstacle"
         grid[3][3].cellType = "obstacle"
         grid[0][0].occupied = Person(True, True, False, grid[0][0])
