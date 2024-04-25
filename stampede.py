@@ -1,4 +1,4 @@
-import time
+import sys
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from IPython.display import clear_output
@@ -174,6 +174,16 @@ def draw_grid(grid, ax):
         for j, cell in enumerate(row):
             if cell.cellType == "exit":
                 color = "lime"
+                fontsize = 14 if len(grid) < 10 else 4
+                ax.text(
+                    j + 0.5,
+                    -i + 0.5,
+                    "Exit",
+                    ha="center",
+                    va="center",
+                    fontsize=fontsize,
+                )
+
             elif cell.cellType == "obstacle":
                 color = "gray"
             else:
@@ -212,6 +222,7 @@ def run_simulation(grid, steps=10):
                 for cell in row:
                     cell.clear_if_exit()
                     if cell.occupied:
+
                         # TODO: Perform pathfinding algorithm for each occupied cell.
                         # Pathfinding should consider fallen people as obstacles for rational, relaxed people, but as
                         # things that can be moved over for better gain for irrational, non-relaxed people.
@@ -271,124 +282,157 @@ def input_safe(prompt, default_func):
 
 
 def main():
-    print("Welcome to the Crowd Stampede Simulation Setup!")
-    grid_selection = input(
-        "Type '1' to use a pre-made grid, or '2' to create your own grid: "
-    )
-    if grid_selection.lower() == "1":
-        # Add more grids for more predefined experiments?
-        grids = {
-            "1": "5x5 grid with two obstacles",
-            "2": "8x8 grid with random obstacles",
-            "3": "50x20 hallway with large obstacles and few exits",
-        }
-        print("Available grids:")
-        for name, description in grids.items():
-            print(f"{name}: {description}")
-        grid_choice = input("Choose a grid: ")
-        if grid_choice == "1":
-            grid = create_grid(5, 5)
-            grid[0][4].cellType = "exit"
-            grid[1][1].cellType = "obstacle"
-            grid[3][3].cellType = "obstacle"
-            grid[0][0].occupied = Person(True, True, False, grid[0][0])
-            grid[2][2].occupied = Person(False, True, True, grid[2][2])
-            grid[4][4].occupied = Person(True, False, True, grid[4][4])
-        elif grid_choice == "2":
-            grid = create_grid(8, 8)
-            # Add random obstacles
-            for _ in range(10):
-                i, j = random.randint(0, 7), random.randint(0, 7)
-                grid[i][j].cellType = "obstacle"
-            grid[0][0].cellType = "exit"
-        elif grid_choice == "3":
-            grid = create_grid(20, 50)
-            grid[6][0].cellType = "exit"
-            grid[7][0].cellType = "exit"
-
-            grid[12][0].cellType = "exit"
-            grid[13][0].cellType = "exit"
-
-            grid[6][49].cellType = "exit"
-            grid[7][49].cellType = "exit"
-
-            grid[12][49].cellType = "exit"
-            grid[13][49].cellType = "exit"
-
-            grid[0][15].cellType = "exit"
-
-            grid[0][35].cellType = "exit"
-
-            grid[19][15].cellType = "exit"
-
-            grid[19][35].cellType = "exit"
-
-            grid[9][9].cellType = "obstacle"
-            grid[9][10].cellType = "obstacle"
-            grid[10][9].cellType = "obstacle"
-            grid[10][10].cellType = "obstacle"
-
-            grid[9][19].cellType = "obstacle"
-            grid[9][20].cellType = "obstacle"
-            grid[10][19].cellType = "obstacle"
-            grid[10][20].cellType = "obstacle"
-
-            grid[9][29].cellType = "obstacle"
-            grid[9][30].cellType = "obstacle"
-            grid[10][29].cellType = "obstacle"
-            grid[10][30].cellType = "obstacle"
-
-            grid[9][39].cellType = "obstacle"
-            grid[9][40].cellType = "obstacle"
-            grid[10][39].cellType = "obstacle"
-            grid[10][40].cellType = "obstacle"
-
-    elif grid_selection.lower() == "2":
-        rows = int(input("Enter the number of rows for the grid: "))
-        cols = int(input("Enter the number of columns for the grid: "))
-        custom_layout = []
-        print(
-            "Enter your grid layout line by line (use '0' for walkable, 'X' for obstacle, 'E' for exit): "
+    args = sys.argv[1:]
+    # For debugging purposes, we can pass in arguments to the script to skip the input prompts.
+    # Example: python stampede.py debug
+    # Can remove in final version.
+    if args and args[0] == "debug":
+        print("Running in debug grid.")
+        print("5x5 grid with two obstacles")
+        grid = create_grid(5, 5)
+        grid[0][4].cellType = "exit"
+        grid[1][1].cellType = "obstacle"
+        grid[3][3].cellType = "obstacle"
+        grid[0][0].occupied = Person(True, True, False, grid[0][0])
+        grid[2][2].occupied = Person(False, True, True, grid[2][2])
+        grid[4][4].occupied = Person(True, False, True, grid[4][4])
+        walkable_count = sum(
+            1 for row in grid for cell in row if cell.cellType == "walkable"
         )
-        for _ in range(rows):
-            new_row = input()
-            if len(new_row) == rows:
-                custom_layout.append(new_row)
-            else:
-                print("Invalid length. A walkable row will be included instead.")
-                custom_layout.append("".join(["0" * rows]))
-        grid = create_grid(rows, cols, custom_layout)
+        print("Population density: 20%")
+        density = 20
+        print("Rational: 20%")
+        rational = 20
+        print("Strong: 20%")
+        strong = 20
+        print("Relaxed: 20%")
+        relaxed = 20
+        print("Seed: 1")
+        seed = 1
+        random.seed(int(seed))
+        print("Max steps: 20")
+        max_steps = 20
 
-    walkable_count = sum(
-        1 for row in grid for cell in row if cell.cellType == "walkable"
-    )
-    density = input_safe(
-        "Enter population density as a percentage (0-100): ",
-        lambda: random.randint(0, 100),
-    )
+    else:
+        print("Welcome to the Crowd Stampede Simulation Setup!")
+        grid_selection = input(
+            "Type '1' to use a pre-made grid, or '2' to create your own grid: "
+        )
+        if grid_selection.lower() == "1":
+            # Add more grids for more predefined experiments?
+            grids = {
+                "1": "5x5 grid with two obstacles",
+                "2": "8x8 grid with random obstacles",
+                "3": "50x20 hallway with large obstacles and few exits",
+            }
+            print("Available grids:")
+            for name, description in grids.items():
+                print(f"{name}: {description}")
+            grid_choice = input("Choose a grid: ")
+            if grid_choice == "1":
+                grid = create_grid(5, 5)
+                grid[0][4].cellType = "exit"
+                grid[1][1].cellType = "obstacle"
+                grid[3][3].cellType = "obstacle"
+                grid[0][0].occupied = Person(True, True, False, grid[0][0])
+                grid[2][2].occupied = Person(False, True, True, grid[2][2])
+                grid[4][4].occupied = Person(True, False, True, grid[4][4])
+            elif grid_choice == "2":
+                grid = create_grid(8, 8)
+                # Add random obstacles
+                for _ in range(10):
+                    i, j = random.randint(0, 7), random.randint(0, 7)
+                    grid[i][j].cellType = "obstacle"
+                grid[0][0].cellType = "exit"
+            elif grid_choice == "3":
+                grid = create_grid(20, 50)
+                grid[6][0].cellType = "exit"
+                grid[7][0].cellType = "exit"
 
-    # These are technically percentage chances to be this trait, which should be fine (I think)
-    rational = input_safe(
-        "Enter the percentage that is rational (0-100): ",
-        lambda: random.randint(0, 100),
-    )
-    strong = input_safe(
-        "Enter the percentage that is strong (0-100): ", lambda: random.randint(0, 100)
-    )
-    relaxed = input_safe(
-        "Enter the percentage that is relaxed (0-100): ", lambda: random.randint(0, 100)
-    )
+                grid[12][0].cellType = "exit"
+                grid[13][0].cellType = "exit"
 
-    seed = input("Enter a seed for the RNG (any integer): ")
-    if not seed:
-        seed = random.randint(0, 10000)
-        print(f"No seed provided. Using random seed: {seed}")
-    random.seed(int(seed))
+                grid[6][49].cellType = "exit"
+                grid[7][49].cellType = "exit"
 
-    max_steps = input_safe(
-        "Enter the number of simulation steps to take (any integer): ", lambda: 100
-    )
+                grid[12][49].cellType = "exit"
+                grid[13][49].cellType = "exit"
 
+                grid[0][15].cellType = "exit"
+
+                grid[0][35].cellType = "exit"
+
+                grid[19][15].cellType = "exit"
+
+                grid[19][35].cellType = "exit"
+
+                grid[9][9].cellType = "obstacle"
+                grid[9][10].cellType = "obstacle"
+                grid[10][9].cellType = "obstacle"
+                grid[10][10].cellType = "obstacle"
+
+                grid[9][19].cellType = "obstacle"
+                grid[9][20].cellType = "obstacle"
+                grid[10][19].cellType = "obstacle"
+                grid[10][20].cellType = "obstacle"
+
+                grid[9][29].cellType = "obstacle"
+                grid[9][30].cellType = "obstacle"
+                grid[10][29].cellType = "obstacle"
+                grid[10][30].cellType = "obstacle"
+
+                grid[9][39].cellType = "obstacle"
+                grid[9][40].cellType = "obstacle"
+                grid[10][39].cellType = "obstacle"
+                grid[10][40].cellType = "obstacle"
+
+        elif grid_selection.lower() == "2":
+            rows = int(input("Enter the number of rows for the grid: "))
+            cols = int(input("Enter the number of columns for the grid: "))
+            custom_layout = []
+            print(
+                "Enter your grid layout line by line (use '0' for walkable, 'X' for obstacle, 'E' for exit): "
+            )
+            for _ in range(rows):
+                new_row = input()
+                if len(new_row) == rows:
+                    custom_layout.append(new_row)
+                else:
+                    print("Invalid length. A walkable row will be included instead.")
+                    custom_layout.append("".join(["0" * rows]))
+            grid = create_grid(rows, cols, custom_layout)
+
+        walkable_count = sum(
+            1 for row in grid for cell in row if cell.cellType == "walkable"
+        )
+        density = input_safe(
+            "Enter population density as a percentage (0-100): ",
+            lambda: random.randint(0, 100),
+        )
+
+        # These are technically percentage chances to be this trait, which should be fine (I think)
+        rational = input_safe(
+            "Enter the percentage that is rational (0-100): ",
+            lambda: random.randint(0, 100),
+        )
+        strong = input_safe(
+            "Enter the percentage that is strong (0-100): ",
+            lambda: random.randint(0, 100),
+        )
+        relaxed = input_safe(
+            "Enter the percentage that is relaxed (0-100): ",
+            lambda: random.randint(0, 100),
+        )
+
+        seed = input("Enter a seed for the RNG (any integer): ")
+        if not seed:
+            seed = random.randint(0, 10000)
+            print(f"No seed provided. Using random seed: {seed}")
+        random.seed(int(seed))
+
+        max_steps = input_safe(
+            "Enter the number of simulation steps to take (any integer): ", lambda: 100
+        )
     total_people = int((density / 100) * walkable_count)
     rows = len(grid)
     cols = len(grid[0])
