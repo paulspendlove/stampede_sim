@@ -18,6 +18,14 @@ class Cell:
         self.x = None
         self.y = None
 
+        self.parent = None
+        self.g = float("inf")
+        self.f = float("inf")
+        self.h = 0
+
+    def __lt__(self, other):
+        return self.f < other.f
+
     def set_neighbors(self, north=None, south=None, east=None, west=None):
         self.north, self.south, self.east, self.west = north, south, east, west
 
@@ -122,6 +130,60 @@ class Person:
     def reset_trampled(self):
         self.trampledCounter = 0
 
+    def a_star(self, grid, start, exit):
+        open_list = []
+        closed_list = set()
+        start.parent = None
+        start.g = 0
+        start.f = start.h
+        heapq.heappush(open_list, (start.f, start))
+
+        while open_list:
+            current = heapq.heappop(open_list)[1]
+
+            if current.cellType == "exit":
+                path = []
+                while current is not None:
+                    path.append(current.get_coordinates())
+                    current = current.parent
+                path.reverse()  # Reverse the path so it's from start to exit
+                return path
+
+            closed_list.add(current)
+
+            for neighbor in [current.north, current.south, current.east, current.west]:
+                if neighbor is not None and neighbor not in closed_list:
+                    if (
+                        neighbor.cellType == "obstacle"
+                    ):  # Skip if the cell is an obstacle
+                        continue
+
+                    # TODO: Logic for pushing and trampling should be implemented here.
+                    # Pathfinding should consider fallen people as obstacles for rational, relaxed people, but as
+                    # things that can be moved over for better gain for irrational, non-relaxed people.
+
+                    if not neighbor.is_occupied():
+                        tentative_g = current.g + 1
+
+                        if (
+                            neighbor.f,
+                            neighbor,
+                        ) not in open_list or tentative_g < neighbor.g:
+                            neighbor.g = tentative_g
+                            neighbor.h = heuristic(
+                                neighbor.get_coordinates(),
+                                find_nearest_exit(
+                                    find_exits(grid), neighbor.get_coordinates()
+                                ),
+                            )
+                            neighbor.f = neighbor.g + neighbor.h
+                            neighbor.parent = current  # Set parent
+
+                            if (neighbor.f, neighbor) not in open_list:
+                                heapq.heappush(open_list, (neighbor.f, neighbor))
+
+        return None
+
 
 def create_grid(rows, cols, custom_layout=None):
     grid = [
@@ -216,24 +278,23 @@ def find_exits(grid):
     return exits
 
 
+def heuristic(a, b):
+    x1, y1 = a
+    x2, y2 = b
+    return abs(x1 - x2) + abs(y1 - y2)
+
+
 def find_nearest_exit(exits, start_location):
-    start_x, start_y = start_location
     closest_exit = None
     closest_distance = math.inf
 
     for exit in exits:
-        exit_x, exit_y = exit
-        distance = math.abs(exit_x - start_x) + math.abs(exit_y - start_y)
+        distance = heuristic(start_location, exit)
         if distance < closest_distance:
             closest_exit = exit
             closest_distance = distance
 
     return closest_exit
-
-
-def a_star_search(grid, start, end):
-    # TODO: Implement A* search algorithm
-    pass
 
 
 def run_simulation(grid, steps=10):
@@ -253,27 +314,24 @@ def run_simulation(grid, steps=10):
                     start_location = person.location.get_coordinates()
                     exit = find_nearest_exit(find_exits(grid), start_location)
 
-                    path = a_star_search(grid, start_location, exit)
-                # TODO: Perform pathfinding algorithm for each occupied cell.
-                # Pathfinding should consider fallen people as obstacles for rational, relaxed people, but as
-                # things that can be moved over for better gain for irrational, non-relaxed people.
+                    path = person.a_star(grid, person.location, exit)
+                    # Used to help see pathfinding, can remove later
+                    print(f"Path for the person at {start_location}: {path}")
 
-                # TODO: Either move person in the algorithm function OR here.  Account for game theory logic.
-                # i.e. Strong and Irrational person will attempt to push to progress.  Others may be blocked, and stand still.
-                # For any fallen or blocked people, use appropriate functions to increment their trackers.
-                # (so we know when to stand a fallen person back up, or mark as dead)
+                    # TODO: Either move person in the algorithm function OR here.  Account for game theory logic.
+                    # i.e. Strong and Irrational person will attempt to push to progress.  Others may be blocked, and stand still.
+                    # For any fallen or blocked people, use appropriate functions to increment their trackers.
+                    # (so we know when to stand a fallen person back up, or mark as dead)
 
-                # TODO: Update each person's state at some point using the update_status function, after calling fallen or blocked, etc. when necessary.
+                    # TODO: Update each person's state at some point using the update_status function, after calling fallen or blocked, etc. when necessary.
 
-                # TODO: Finalize how pushing will work.  Since 2 people can't occupy one space, does pushing swap both?
-                # Or does pushing only occur if there's an empty space past the fallen person to be moved into?
-                # Same decision should apply to trampling.
+                    # TODO: Finalize how pushing will work.  Since 2 people can't occupy one space, does pushing swap both?
+                    # Or does pushing only occur if there's an empty space past the fallen person to be moved into?
+                    # Same decision should apply to trampling.
 
-                # I don't think we have time to calculate inertia or any similar physics mentioned in the paper.
-                # I'm not convinced the paper did either, as its mentioned so briefly.  I think this current turn based system
-                # will be fine though.
-
-                pass
+                    # I don't think we have time to calculate inertia or any similar physics mentioned in the paper.
+                    # I'm not convinced the paper did either, as its mentioned so briefly.  I think this current turn based system
+                    # will be fine though.
 
             clear_output(wait=True)
             draw_grid(grid, ax)
