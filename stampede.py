@@ -306,7 +306,6 @@ def run_simulation(grid, steps=10):
     print("\nRunning simulation...")
     try:
         for _ in range(steps + 1):
-
             if _ != 0:
 
                 # PATHFINDING LOGIC
@@ -335,33 +334,18 @@ def run_simulation(grid, steps=10):
 
                 # MOVEMENT LOGIC
                 for person in Person.all_people:
-                    # Used to help see pathfinding, can remove later
+
+                    old_location = (person.location.x, person.location.y)
 
                     if not person.isDead and not person.isFallen:
                         path_with_obstacles, path_without_obstacles = paths[person]
 
-                        if path_with_obstacles:
-                            if len(path_with_obstacles) > 1:
-                                next_cell = Cell.get_cell_from_coordinates(
-                                    path_with_obstacles[1][0],
-                                    path_with_obstacles[1][1],
-                                    grid,
-                                )
-                            if (
-                                next_cell is not None
-                                and not next_cell.is_occupied()
-                                and next_cell.cellType != "obstacle"
-                            ):
-                                if next_cell.x > person.location.x:
-                                    person.move_right()
-                                elif next_cell.x < person.location.x:
-                                    person.move_left()
-                                elif next_cell.y > person.location.y:
-                                    person.move_down()
-                                elif next_cell.y < person.location.y:
-                                    person.move_up()
-
-                        elif path_without_obstacles:
+                        # TODO: Game theory logic
+                        # Depending on the person's traits, they will prioritize the different paths.
+                        # For example, a strong and irrational person will prioritize the path with obstacles.
+                        # A relaxed person will prioritize the shortest path but will wait if blocked.
+                        # etc.
+                        if path_without_obstacles:
                             if len(path_without_obstacles) > 1:
                                 next_cell = Cell.get_cell_from_coordinates(
                                     path_without_obstacles[1][0],
@@ -382,23 +366,39 @@ def run_simulation(grid, steps=10):
                                 elif next_cell.y < person.location.y:
                                     person.move_up()
 
-                        next_cell.clear_if_exit()
-                        person.update_status()
+                        elif path_with_obstacles:
+                            if len(path_with_obstacles) > 1:
+                                next_cell = Cell.get_cell_from_coordinates(
+                                    path_with_obstacles[1][0],
+                                    path_with_obstacles[1][1],
+                                    grid,
+                                )
+                            if (
+                                next_cell is not None
+                                and not next_cell.is_occupied()
+                                and next_cell.cellType != "obstacle"
+                            ):
+                                if next_cell.x > person.location.x:
+                                    person.move_right()
+                                elif next_cell.x < person.location.x:
+                                    person.move_left()
+                                elif next_cell.y > person.location.y:
+                                    person.move_down()
+                                elif next_cell.y < person.location.y:
+                                    person.move_up()
 
-                        # TODO: Either move person in the algorithm function OR here.  Account for game theory logic.
-                        # i.e. Strong and Irrational person will attempt to push to progress.  Others may be blocked, and stand still.
-                        # For any fallen or blocked people, use appropriate functions to increment their trackers.
-                        # (so we know when to stand a fallen person back up, or mark as dead)
+                    if old_location == (person.location.x, person.location.y):
+                        person.blocked()
+                    person.update_status()
+                    next_cell.clear_if_exit()
 
-                        # TODO: Update each person's state at some point using the update_status function, after calling fallen or blocked, etc. when necessary.
+                    # TODO: Finalize how pushing will work.  Since 2 people can't occupy one space, does pushing swap both?
+                    # Or does pushing only occur if there's an empty space past the fallen person to be moved into?
+                    # Same decision should apply to trampling.
 
-                        # TODO: Finalize how pushing will work.  Since 2 people can't occupy one space, does pushing swap both?
-                        # Or does pushing only occur if there's an empty space past the fallen person to be moved into?
-                        # Same decision should apply to trampling.
-
-                        # I don't think we have time to calculate inertia or any similar physics mentioned in the paper.
-                        # I'm not convinced the paper did either, as its mentioned so briefly.  I think this current turn based system
-                        # will be fine though.
+                    # I don't think we have time to calculate inertia or any similar physics mentioned in the paper.
+                    # I'm not convinced the paper did either, as its mentioned so briefly.  I think this current turn based system
+                    # will be fine though.
 
             clear_output(wait=True)
             draw_grid(grid, ax)
@@ -444,7 +444,7 @@ def main():
     # For debugging purposes, we can pass in arguments to the script to skip the input prompts.
     # Example: python stampede.py debug
     # Can remove in final version.
-    if args and args[0] == "debug":
+    if args and args[0] == "debug1":
         print("Running in debug grid.")
         print("5x5 grid with two obstacles")
         grid = create_grid(5, 5)
@@ -471,6 +471,32 @@ def main():
         random.seed(int(seed))
         print("Max steps: 20")
         max_steps = 20
+
+    elif args and args[0] == "debug2":
+        print("Running in debug grid.")
+        print("8x8 grid with obstacles")
+        print("Population density: 20%")
+        density = 50
+        print("Rational: 20%")
+        rational = 50
+        print("Strong: 20%")
+        strong = 50
+        print("Relaxed: 20%")
+        relaxed = 50
+        print("Seed: 1")
+        seed = 1
+        random.seed(int(seed))
+        print("Max steps: 20")
+        max_steps = 30
+        grid = create_grid(8, 8)
+        walkable_count = sum(
+            1 for row in grid for cell in row if cell.cellType == "walkable"
+        )
+        # Add random obstacles
+        for _ in range(10):
+            i, j = random.randint(0, 7), random.randint(0, 7)
+            grid[i][j].cellType = "obstacle"
+        grid[0][0].cellType = "exit"
 
     else:
         print("Welcome to the Crowd Stampede Simulation Setup!")
