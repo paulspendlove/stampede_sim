@@ -39,6 +39,9 @@ class Cell:
     def get_coordinates(self):
         return self.x, self.y
 
+    def get_cell_from_coordinates(x, y, grid):
+        return grid[y][x]
+
 
 class Person:
     all_people = []
@@ -73,25 +76,25 @@ class Person:
             return "purple"
 
     def move_left(self):
-        if self.location.west and not self.location.west.occupied():
+        if self.location.west and not self.location.west.is_occupied():
             self.location.occupied = None
             self.location = self.location.west
             self.location.occupied = self
 
     def move_right(self):
-        if self.location.east and not self.location.east.occupied():
+        if self.location.east and not self.location.east.is_occupied():
             self.location.occupied = None
             self.location = self.location.east
             self.location.occupied = self
 
     def move_up(self):
-        if self.location.north and not self.location.north.occupied():
+        if self.location.north and not self.location.north.is_occupied():
             self.location.occupied = None
             self.location = self.location.north
             self.location.occupied = self
 
     def move_down(self):
-        if self.location.south and not self.location.south.occupied():
+        if self.location.south and not self.location.south.is_occupied():
             self.location.occupied = None
             self.location = self.location.south
             self.location.occupied = self
@@ -130,57 +133,56 @@ class Person:
     def reset_trampled(self):
         self.trampledCounter = 0
 
-    def a_star(self, grid, start, exit):
+    def a_star(self, grid, start, person_obstacles=False):
         open_list = []
+        open_set = set()
         closed_list = set()
         start.parent = None
         start.g = 0
         start.f = start.h
         heapq.heappush(open_list, (start.f, start))
+        open_set.add(start)
 
         while open_list:
             current = heapq.heappop(open_list)[1]
+            if current in open_set:
+                open_set.remove(current)
+            else:
+                continue
 
             if current.cellType == "exit":
                 path = []
                 while current is not None:
                     path.append(current.get_coordinates())
                     current = current.parent
-                path.reverse()  # Reverse the path so it's from start to exit
+                path = path[::-1]  # Reverse the path so it's from start to exit
                 return path
 
             closed_list.add(current)
 
             for neighbor in [current.north, current.south, current.east, current.west]:
                 if neighbor is not None and neighbor not in closed_list:
-                    if (
-                        neighbor.cellType == "obstacle"
-                    ):  # Skip if the cell is an obstacle
+                    if neighbor.cellType == "obstacle":
                         continue
+                    if person_obstacles and neighbor.is_occupied():
+                        continue
+                    tentative_g = current.g + 1
+                    if (
+                        neighbor not in open_set or tentative_g < neighbor.g
+                    ):  # Check if neighbor is in open_set
+                        neighbor.g = tentative_g
+                        neighbor.h = heuristic(
+                            neighbor.get_coordinates(),
+                            find_nearest_exit(
+                                find_exits(grid), neighbor.get_coordinates()
+                            ),
+                        )
+                        neighbor.f = neighbor.g + neighbor.h
+                        neighbor.parent = current  # Set parent
 
-                    # TODO: Logic for pushing and trampling should be implemented here.
-                    # Pathfinding should consider fallen people as obstacles for rational, relaxed people, but as
-                    # things that can be moved over for better gain for irrational, non-relaxed people.
-
-                    if not neighbor.is_occupied():
-                        tentative_g = current.g + 1
-
-                        if (
-                            neighbor.f,
-                            neighbor,
-                        ) not in open_list or tentative_g < neighbor.g:
-                            neighbor.g = tentative_g
-                            neighbor.h = heuristic(
-                                neighbor.get_coordinates(),
-                                find_nearest_exit(
-                                    find_exits(grid), neighbor.get_coordinates()
-                                ),
-                            )
-                            neighbor.f = neighbor.g + neighbor.h
-                            neighbor.parent = current  # Set parent
-
-                            if (neighbor.f, neighbor) not in open_list:
-                                heapq.heappush(open_list, (neighbor.f, neighbor))
+                        if neighbor not in open_set:  # Check if neighbor is in open_set
+                            heapq.heappush(open_list, (neighbor.f, neighbor))
+                            open_set.add(neighbor)
 
         return None
 
@@ -303,40 +305,107 @@ def run_simulation(grid, steps=10):
 
     print("\nRunning simulation...")
     try:
-        people_locations = [
-            person.location.get_coordinates() for person in Person.all_people
-        ]
-        for _ in range(steps):
-            for person in Person.all_people:
-                if person.isDead or person.isFallen:
-                    continue
-                else:
-                    start_location = person.location.get_coordinates()
-                    exit = find_nearest_exit(find_exits(grid), start_location)
+        for _ in range(steps + 1):
 
-                    path = person.a_star(grid, person.location, exit)
+            if _ != 0:
+
+                # PATHFINDING LOGIC
+                paths = {}
+                for person in Person.all_people:
+                    if not person.isDead and not person.isFallen:
+                        start_location = person.location.get_coordinates()
+                        path_without_obstacles = person.a_star(
+                            grid, person.location, False
+                        )
+                        path_with_obstacles = person.a_star(grid, person.location, True)
+
+                        paths[person] = (path_with_obstacles, path_without_obstacles)
+
+                if person.location == "exit":
+                    Person.all_people.remove(person)
+
+                Person.all_people.sort(
+                    key=lambda person: heuristic(
+                        person.location.get_coordinates(),
+                        find_nearest_exit(
+                            find_exits(grid), person.location.get_coordinates()
+                        ),
+                    )
+                )
+
+                # MOVEMENT LOGIC
+                for person in Person.all_people:
                     # Used to help see pathfinding, can remove later
-                    print(f"Path for the person at {start_location}: {path}")
 
-                    # TODO: Either move person in the algorithm function OR here.  Account for game theory logic.
-                    # i.e. Strong and Irrational person will attempt to push to progress.  Others may be blocked, and stand still.
-                    # For any fallen or blocked people, use appropriate functions to increment their trackers.
-                    # (so we know when to stand a fallen person back up, or mark as dead)
+                    if not person.isDead and not person.isFallen:
+                        path_with_obstacles, path_without_obstacles = paths[person]
 
-                    # TODO: Update each person's state at some point using the update_status function, after calling fallen or blocked, etc. when necessary.
+                        if path_with_obstacles:
+                            if len(path_with_obstacles) > 1:
+                                next_cell = Cell.get_cell_from_coordinates(
+                                    path_with_obstacles[1][0],
+                                    path_with_obstacles[1][1],
+                                    grid,
+                                )
+                            if (
+                                next_cell is not None
+                                and not next_cell.is_occupied()
+                                and next_cell.cellType != "obstacle"
+                            ):
+                                if next_cell.x > person.location.x:
+                                    person.move_right()
+                                elif next_cell.x < person.location.x:
+                                    person.move_left()
+                                elif next_cell.y > person.location.y:
+                                    person.move_down()
+                                elif next_cell.y < person.location.y:
+                                    person.move_up()
 
-                    # TODO: Finalize how pushing will work.  Since 2 people can't occupy one space, does pushing swap both?
-                    # Or does pushing only occur if there's an empty space past the fallen person to be moved into?
-                    # Same decision should apply to trampling.
+                        elif path_without_obstacles:
+                            if len(path_without_obstacles) > 1:
+                                next_cell = Cell.get_cell_from_coordinates(
+                                    path_without_obstacles[1][0],
+                                    path_without_obstacles[1][1],
+                                    grid,
+                                )
+                            if (
+                                next_cell is not None
+                                and not next_cell.is_occupied()
+                                and next_cell.cellType != "obstacle"
+                            ):
+                                if next_cell.x > person.location.x:
+                                    person.move_right()
+                                elif next_cell.x < person.location.x:
+                                    person.move_left()
+                                elif next_cell.y > person.location.y:
+                                    person.move_down()
+                                elif next_cell.y < person.location.y:
+                                    person.move_up()
 
-                    # I don't think we have time to calculate inertia or any similar physics mentioned in the paper.
-                    # I'm not convinced the paper did either, as its mentioned so briefly.  I think this current turn based system
-                    # will be fine though.
+                        next_cell.clear_if_exit()
+                        person.update_status()
+
+                        # TODO: Either move person in the algorithm function OR here.  Account for game theory logic.
+                        # i.e. Strong and Irrational person will attempt to push to progress.  Others may be blocked, and stand still.
+                        # For any fallen or blocked people, use appropriate functions to increment their trackers.
+                        # (so we know when to stand a fallen person back up, or mark as dead)
+
+                        # TODO: Update each person's state at some point using the update_status function, after calling fallen or blocked, etc. when necessary.
+
+                        # TODO: Finalize how pushing will work.  Since 2 people can't occupy one space, does pushing swap both?
+                        # Or does pushing only occur if there's an empty space past the fallen person to be moved into?
+                        # Same decision should apply to trampling.
+
+                        # I don't think we have time to calculate inertia or any similar physics mentioned in the paper.
+                        # I'm not convinced the paper did either, as its mentioned so briefly.  I think this current turn based system
+                        # will be fine though.
 
             clear_output(wait=True)
             draw_grid(grid, ax)
-
-            fig.suptitle(f"Step {_ + 1} of {steps}")
+            if _ == 0:
+                plt.suptitle("Initial State")
+            else:
+                plt.suptitle(f"Step {_} of {steps}")
             plt.pause(1)
 
             if auto_run:
