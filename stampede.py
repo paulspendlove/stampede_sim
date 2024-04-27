@@ -347,7 +347,7 @@ def run_simulation(grid, steps=10):
                 )
 
                 # MOVEMENT LOGIC
-
+                people_to_remove = []
                 for person in Person.all_people:
                     old_location = (person.location.x, person.location.y)
 
@@ -529,9 +529,9 @@ def run_simulation(grid, steps=10):
                                         person.move_up()
 
                         if person.location.cellType == "exit":
-                            Person.all_people.remove(person)
+                            people_to_remove.append(person)
                             person.location.occupied = None
-                            continue
+                            
 
                         if old_location == (person.location.x, person.location.y):
                             person.blocked()
@@ -539,6 +539,8 @@ def run_simulation(grid, steps=10):
                     person.update_status()
                     next_cell.clear_if_exit()
 
+                for person in people_to_remove:
+                    Person.all_people.remove(person)
             clear_output(wait=True)
             draw_grid(grid, ax)
             if _ == 0:
