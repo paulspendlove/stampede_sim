@@ -268,7 +268,15 @@ def draw_grid(grid, ax):
                 ax.add_patch(
                     patches.Circle((j + 0.5, -(i - 0.5)), 0.4, color=person_color)
                 )
-                ax.text(j + 0.5, -(i - 0.5), cell.occupied.id, ha="center", va="center", color="white", fontsize=fontsize)
+                ax.text(
+                    j + 0.5,
+                    -(i - 0.5),
+                    cell.occupied.id,
+                    ha="center",
+                    va="center",
+                    color="white",
+                    fontsize=fontsize,
+                )
 
     ax.set_xlim(0, len(grid[0]) + (len(grid[0]) / 3))
     ax.set_ylim(-len(grid), 1)
@@ -339,6 +347,7 @@ def run_simulation(grid, steps=10):
                 )
 
                 # MOVEMENT LOGIC
+
                 for person in Person.all_people:
 
                     old_location = (person.location.x, person.location.y)
@@ -356,13 +365,26 @@ def run_simulation(grid, steps=10):
                         if (person.isRational or person.isRelaxed) and not (
                             person.isFallen or person.isDead
                         ):
-                            if path_without_obstacles:
-                                if len(path_without_obstacles) > 1:
+
+                            # If both paths are available, prioritize the shortest path
+                            if path_without_obstacles and path_with_obstacles:
+                                if (
+                                    len(path_without_obstacles)
+                                    < len(path_with_obstacles)
+                                    and len(path_without_obstacles) > 1
+                                ):
                                     next_cell = Cell.get_cell_from_coordinates(
                                         path_without_obstacles[1][0],
                                         path_without_obstacles[1][1],
                                         grid,
                                     )
+                                else: 
+                                    next_cell = Cell.get_cell_from_coordinates(
+                                        path_with_obstacles[1][0],
+                                        path_with_obstacles[1][1],
+                                        grid,
+                                    )
+                                    
                                 if (
                                     next_cell is not None
                                     and not next_cell.is_occupied()
@@ -376,7 +398,7 @@ def run_simulation(grid, steps=10):
                                         person.move_down()
                                     elif next_cell.y < person.location.y:
                                         person.move_up()
-
+                            # only path with obstacles is available
                             elif path_with_obstacles:
                                 if len(path_with_obstacles) > 1:
                                     next_cell = Cell.get_cell_from_coordinates(
@@ -397,6 +419,28 @@ def run_simulation(grid, steps=10):
                                         person.move_down()
                                     elif next_cell.y < person.location.y:
                                         person.move_up()
+                            # Did not move and resulted to without obstacles path
+                            else:
+                                if len(path_without_obstacles) > 1:
+                                    next_cell = Cell.get_cell_from_coordinates(
+                                        path_without_obstacles[1][0],
+                                        path_without_obstacles[1][1],
+                                        grid,
+                                    )
+                                if (
+                                    next_cell is not None
+                                    and not next_cell.is_occupied()
+                                    and next_cell.cellType != "obstacle"
+                                ):
+                                    if next_cell.x > person.location.x:
+                                        person.move_right()
+                                    elif next_cell.x < person.location.x:
+                                        person.move_left()
+                                    elif next_cell.y > person.location.y:
+                                        person.move_down()
+                                    elif next_cell.y < person.location.y:
+                                        person.move_up()
+                                
                         # else the person is irration and will prioritize the path with obstacles
                         elif not person.isRational and not (
                             person.isFallen or person.isDead
@@ -495,8 +539,10 @@ def run_simulation(grid, steps=10):
                             Person.all_people.remove(person)
                             person.location.occupied = None
                             continue
-                    if old_location == (person.location.x, person.location.y):
-                        person.blocked()
+
+                        if old_location == (person.location.x, person.location.y):
+                            person.blocked()
+
                     person.update_status()
                     next_cell.clear_if_exit()
 
