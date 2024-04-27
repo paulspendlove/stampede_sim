@@ -345,47 +345,135 @@ def run_simulation(grid, steps=10):
                         # For example, a strong and irrational person will prioritize the path with obstacles.
                         # A relaxed person will prioritize the shortest path but will wait if blocked.
                         # etc.
-                        if path_without_obstacles:
-                            if len(path_without_obstacles) > 1:
-                                next_cell = Cell.get_cell_from_coordinates(
-                                    path_without_obstacles[1][0],
-                                    path_without_obstacles[1][1],
-                                    grid,
-                                )
-                            if (
-                                next_cell is not None
-                                and not next_cell.is_occupied()
-                                and next_cell.cellType != "obstacle"
-                            ):
-                                if next_cell.x > person.location.x:
-                                    person.move_right()
-                                elif next_cell.x < person.location.x:
-                                    person.move_left()
-                                elif next_cell.y > person.location.y:
-                                    person.move_down()
-                                elif next_cell.y < person.location.y:
-                                    person.move_up()
 
-                        elif path_with_obstacles:
-                            if len(path_with_obstacles) > 1:
-                                next_cell = Cell.get_cell_from_coordinates(
-                                    path_with_obstacles[1][0],
-                                    path_with_obstacles[1][1],
-                                    grid,
-                                )
-                            if (
-                                next_cell is not None
-                                and not next_cell.is_occupied()
-                                and next_cell.cellType != "obstacle"
-                            ):
-                                if next_cell.x > person.location.x:
-                                    person.move_right()
-                                elif next_cell.x < person.location.x:
-                                    person.move_left()
-                                elif next_cell.y > person.location.y:
-                                    person.move_down()
-                                elif next_cell.y < person.location.y:
-                                    person.move_up()
+                        # if the person is rational or relaxed, prioritize path without obstacles
+                        if (person.isRational or person.isRelaxed) and not (person.isFallen or person.isDead):
+                            if path_without_obstacles:
+                                if len(path_without_obstacles) > 1:
+                                    next_cell = Cell.get_cell_from_coordinates(
+                                        path_without_obstacles[1][0],
+                                        path_without_obstacles[1][1],
+                                        grid,
+                                    )
+                                if (
+                                    next_cell is not None
+                                    and not next_cell.is_occupied()
+                                    and next_cell.cellType != "obstacle"
+                                ):
+                                    if next_cell.x > person.location.x:
+                                        person.move_right()
+                                    elif next_cell.x < person.location.x:
+                                        person.move_left()
+                                    elif next_cell.y > person.location.y:
+                                        person.move_down()
+                                    elif next_cell.y < person.location.y:
+                                        person.move_up()
+
+                            elif path_with_obstacles:
+                                if len(path_with_obstacles) > 1:
+                                    next_cell = Cell.get_cell_from_coordinates(
+                                        path_with_obstacles[1][0],
+                                        path_with_obstacles[1][1],
+                                        grid,
+                                    )
+                                if (
+                                    next_cell is not None
+                                    and not next_cell.is_occupied()
+                                    and next_cell.cellType != "obstacle"
+                                ):
+                                    if next_cell.x > person.location.x:
+                                        person.move_right()
+                                    elif next_cell.x < person.location.x:
+                                        person.move_left()
+                                    elif next_cell.y > person.location.y:
+                                        person.move_down()
+                                    elif next_cell.y < person.location.y:
+                                        person.move_up()
+                        # else the person is irration and will prioritize the path with obstacles
+                        elif not person.isRational and not (person.isFallen or person.isDead):
+                            if path_with_obstacles:
+                                if len(path_with_obstacles) > 1:
+                                    next_cell = Cell.get_cell_from_coordinates(
+                                        path_with_obstacles[1][0],
+                                        path_with_obstacles[1][1],
+                                        grid,
+                                    )
+                                if (
+                                        next_cell is not None
+                                        and not next_cell.is_occupied()
+                                        and next_cell.cellType != "obstacle"
+                                ):
+                                    if next_cell.x > person.location.x:
+                                        person.move_right()
+                                    elif next_cell.x < person.location.x:
+                                        person.move_left()
+                                    elif next_cell.y > person.location.y:
+                                        person.move_down()
+                                    elif next_cell.y < person.location.y:
+                                        person.move_up()
+                                elif (
+                                    # if the next cell is occupied by a person
+                                        next_cell is not None
+                                        and next_cell.is_occupied()
+                                        and next_cell.cellType != "obstacle"
+                                ):
+                                    # if the person in the next cell is fallen or dead swap places
+                                    if next_cell.occupied.isFallen or next_cell.occupied.isDead:
+                                        if next_cell.x > person.location.x:
+                                            person.move_right()
+                                            next_cell.occupied.move_left()
+                                        elif next_cell.x < person.location.x:
+                                            person.move_left()
+                                            next_cell.occupied.move_right()
+                                        elif next_cell.y > person.location.y:
+                                            person.move_down()
+                                            next_cell.occupied.move_up()
+                                        elif next_cell.y < person.location.y:
+                                            person.move_up()
+                                            next_cell.occupied.move_down()
+                                    # if the current person is strong
+                                    elif person.isStrong:
+                                        # if the next person is not strong, knock them down and swap places
+                                        if not next_cell.occupied.isStrong:
+                                            next_cell.occupied.fall()
+                                            next_cell.occupied.trampled()
+                                            if next_cell.x > person.location.x:
+                                                person.move_right()
+                                                next_cell.occupied.move_left()
+                                            elif next_cell.x < person.location.x:
+                                                person.move_left()
+                                                next_cell.occupied.move_right()
+                                            elif next_cell.y > person.location.y:
+                                                person.move_down()
+                                                next_cell.occupied.move_up()
+                                            elif next_cell.y < person.location.y:
+                                                person.move_up()
+                                                next_cell.occupied.move_down()
+                                    # else if the current person is weak and the next person is strong
+                                    elif not person.isStrong and next_cell.occupied.isStrong:
+                                        # they knock themselves down
+                                        person.fall()
+
+                            elif path_without_obstacles:
+                                if len(path_without_obstacles) > 1:
+                                    next_cell = Cell.get_cell_from_coordinates(
+                                        path_without_obstacles[1][0],
+                                        path_without_obstacles[1][1],
+                                        grid,
+                                    )
+                                if (
+                                        next_cell is not None
+                                        and not next_cell.is_occupied()
+                                        and next_cell.cellType != "obstacle"
+                                ):
+                                    if next_cell.x > person.location.x:
+                                        person.move_right()
+                                    elif next_cell.x < person.location.x:
+                                        person.move_left()
+                                    elif next_cell.y > person.location.y:
+                                        person.move_down()
+                                    elif next_cell.y < person.location.y:
+                                        person.move_up()
 
                     if old_location == (person.location.x, person.location.y):
                         person.blocked()
