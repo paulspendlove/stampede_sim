@@ -349,17 +349,10 @@ def run_simulation(grid, steps=10):
                 # MOVEMENT LOGIC
 
                 for person in Person.all_people:
-
                     old_location = (person.location.x, person.location.y)
 
                     if not person.isDead and not person.isFallen:
                         path_with_obstacles, path_without_obstacles = paths[person]
-
-                        # TODO: Game theory logic
-                        # Depending on the person's traits, they will prioritize the different paths.
-                        # For example, a strong and irrational person will prioritize the path with obstacles.
-                        # A relaxed person will prioritize the shortest path but will wait if blocked.
-                        # etc.
 
                         # if the person is rational or relaxed, prioritize path without obstacles
                         if (person.isRational or person.isRelaxed) and not (
@@ -545,14 +538,6 @@ def run_simulation(grid, steps=10):
 
                     person.update_status()
                     next_cell.clear_if_exit()
-
-                    # TODO: Finalize how pushing will work.  Since 2 people can't occupy one space, does pushing swap both?
-                    # Or does pushing only occur if there's an empty space past the fallen person to be moved into?
-                    # Same decision should apply to trampling.
-
-                    # I don't think we have time to calculate inertia or any similar physics mentioned in the paper.
-                    # I'm not convinced the paper did either, as its mentioned so briefly.  I think this current turn based system
-                    # will be fine though.
 
             clear_output(wait=True)
             draw_grid(grid, ax)
