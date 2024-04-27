@@ -654,6 +654,7 @@ def main():
                 "2": "8x8 grid with random obstacles",
                 "3": "50x20 hallway with large obstacles and few exits",
                 "4": "10x25 hallway with many obstacles and 1 exit",
+                "5": "10x25 hallway with safer design"
             }
             print("Available grids:")
             for name, description in grids.items():
@@ -734,6 +735,60 @@ def main():
                 grid [5][15].cellType = "obstacle"
                 grid [4][16].cellType = "obstacle"
                 grid [5][16].cellType = "obstacle"
+
+                grid [4][20].cellType = "obstacle"
+                grid [5][20].cellType = "obstacle"
+                grid [4][21].cellType = "obstacle"
+                grid [5][21].cellType = "obstacle"
+
+                grid [0][1].cellType = "obstacle"
+                grid [0][2].cellType = "obstacle"
+                grid [0][3].cellType = "obstacle"
+                grid [0][4].cellType = "obstacle"
+                grid [0][5].cellType = "obstacle"
+
+                grid [9][1].cellType = "obstacle"
+                grid [9][2].cellType = "obstacle"
+                grid [9][3].cellType = "obstacle"
+                grid [9][4].cellType = "obstacle"
+                grid [9][5].cellType = "obstacle"
+
+                grid [0][24].cellType = "obstacle"
+                grid [0][23].cellType = "obstacle"
+                grid [0][22].cellType = "obstacle"
+                grid [0][21].cellType = "obstacle"
+                grid [0][20].cellType = "obstacle"
+
+                grid [9][24].cellType = "obstacle"
+                grid [9][23].cellType = "obstacle"
+                grid [9][22].cellType = "obstacle"
+                grid [9][21].cellType = "obstacle"
+                grid [9][20].cellType = "obstacle"
+
+            elif grid_choice == '5':
+                grid = create_grid(10, 25)
+                grid[4][0].cellType = "exit"
+                grid[5][0].cellType = "exit"
+
+                grid[4][24].cellType = "exit"
+                grid[5][24].cellType = "exit"
+
+                grid[3][24].cellType = "exit"
+                grid[6][24].cellType = "exit"
+
+                grid[3][0].cellType = "exit"
+                grid[6][0].cellType = "exit"
+
+                grid[0][13].cellType = "exit"
+                grid[0][12].cellType = "exit"
+
+                grid[9][13].cellType = "exit"
+                grid[9][12].cellType = "exit"
+
+                grid [4][5].cellType = "obstacle"
+                grid [5][5].cellType = "obstacle"
+                grid [4][6].cellType = "obstacle"
+                grid [5][6].cellType = "obstacle"
 
                 grid [4][20].cellType = "obstacle"
                 grid [5][20].cellType = "obstacle"
