@@ -45,8 +45,12 @@ class Cell:
 
 class Person:
     all_people = []
+    id_counter = 0
 
     def __init__(self, isStrong, isRational, isRelaxed, location):
+        self.id = Person.id_counter
+        Person.id_counter += 1
+
         self.all_people.append(self)
         self.isStrong = isStrong
         self.isRational = isRational
@@ -347,7 +351,9 @@ def run_simulation(grid, steps=10):
                         # etc.
 
                         # if the person is rational or relaxed, prioritize path without obstacles
-                        if (person.isRational or person.isRelaxed) and not (person.isFallen or person.isDead):
+                        if (person.isRational or person.isRelaxed) and not (
+                            person.isFallen or person.isDead
+                        ):
                             if path_without_obstacles:
                                 if len(path_without_obstacles) > 1:
                                     next_cell = Cell.get_cell_from_coordinates(
@@ -390,7 +396,9 @@ def run_simulation(grid, steps=10):
                                     elif next_cell.y < person.location.y:
                                         person.move_up()
                         # else the person is irration and will prioritize the path with obstacles
-                        elif not person.isRational and not (person.isFallen or person.isDead):
+                        elif not person.isRational and not (
+                            person.isFallen or person.isDead
+                        ):
                             if path_with_obstacles:
                                 if len(path_with_obstacles) > 1:
                                     next_cell = Cell.get_cell_from_coordinates(
@@ -399,9 +407,9 @@ def run_simulation(grid, steps=10):
                                         grid,
                                     )
                                 if (
-                                        next_cell is not None
-                                        and not next_cell.is_occupied()
-                                        and next_cell.cellType != "obstacle"
+                                    next_cell is not None
+                                    and not next_cell.is_occupied()
+                                    and next_cell.cellType != "obstacle"
                                 ):
                                     if next_cell.x > person.location.x:
                                         person.move_right()
@@ -413,12 +421,15 @@ def run_simulation(grid, steps=10):
                                         person.move_up()
                                 elif (
                                     # if the next cell is occupied by a person
-                                        next_cell is not None
-                                        and next_cell.is_occupied()
-                                        and next_cell.cellType != "obstacle"
+                                    next_cell is not None
+                                    and next_cell.is_occupied()
+                                    and next_cell.cellType != "obstacle"
                                 ):
                                     # if the person in the next cell is fallen or dead swap places
-                                    if next_cell.occupied.isFallen or next_cell.occupied.isDead:
+                                    if (
+                                        next_cell.occupied.isFallen
+                                        or next_cell.occupied.isDead
+                                    ):
                                         if next_cell.x > person.location.x:
                                             person.move_right()
                                             next_cell.occupied.move_left()
@@ -450,7 +461,10 @@ def run_simulation(grid, steps=10):
                                                 person.move_up()
                                                 next_cell.occupied.move_down()
                                     # else if the current person is weak and the next person is strong
-                                    elif not person.isStrong and next_cell.occupied.isStrong:
+                                    elif (
+                                        not person.isStrong
+                                        and next_cell.occupied.isStrong
+                                    ):
                                         # they knock themselves down
                                         person.fall()
 
@@ -462,9 +476,9 @@ def run_simulation(grid, steps=10):
                                         grid,
                                     )
                                 if (
-                                        next_cell is not None
-                                        and not next_cell.is_occupied()
-                                        and next_cell.cellType != "obstacle"
+                                    next_cell is not None
+                                    and not next_cell.is_occupied()
+                                    and next_cell.cellType != "obstacle"
                                 ):
                                     if next_cell.x > person.location.x:
                                         person.move_right()
@@ -475,6 +489,10 @@ def run_simulation(grid, steps=10):
                                     elif next_cell.y < person.location.y:
                                         person.move_up()
 
+                        if person.location.cellType == "exit":
+                            Person.all_people.remove(person)
+                            person.location.occupied = None
+                            continue
                     if old_location == (person.location.x, person.location.y):
                         person.blocked()
                     person.update_status()
@@ -492,8 +510,11 @@ def run_simulation(grid, steps=10):
             draw_grid(grid, ax)
             if _ == 0:
                 plt.suptitle("Initial State")
+            elif _ == steps:
+                plt.suptitle("Final State")
             else:
                 plt.suptitle(f"Step {_} of {steps}")
+            plt.draw()
             plt.pause(1)
 
             if auto_run:
