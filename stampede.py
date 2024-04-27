@@ -264,9 +264,11 @@ def draw_grid(grid, ax):
             ax.add_patch(patches.Rectangle((j, -i), 1, 1, fill=True, color=color))
             if cell.occupied:
                 person_color = cell.occupied.color()
+                fontsize = 14 if len(grid) < 10 else 4.6
                 ax.add_patch(
                     patches.Circle((j + 0.5, -(i - 0.5)), 0.4, color=person_color)
                 )
+                ax.text(j + 0.5, -(i - 0.5), cell.occupied.id, ha="center", va="center", color="white", fontsize=fontsize)
 
     ax.set_xlim(0, len(grid[0]) + (len(grid[0]) / 3))
     ax.set_ylim(-len(grid), 1)
